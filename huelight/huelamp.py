@@ -13,8 +13,11 @@ try:
 except ImportError:
     exit("This script requires the flask module\nInstall with: sudo pip install flask")
 
-import unicornoverdrive as unicorn
-
+try: 
+    #I made a custom unicornhat library for increased brightness...
+    import unicornoverdrive as unicorn
+except ImportError:
+    import unicornhat as unicorn
 
 control_panel = """
     <table cellspacing="0" cellpadding="0" border-collapse="collapse">"""
@@ -41,31 +44,6 @@ app = Flask(__name__)
 @app.route('/')
 def home():
     return render_template('paint.html')
-
-@app.route('/save/<filename>')
-def save(filename):
-    try:
-        os.mkdir('saves/')
-    except OSError:
-        pass
-    try:
-        data = unicorn.get_pixels()
-        print(filename, data)
-        file = open('saves/' + filename + '.py', 'w')
-        file.write('#!/usr/bin/env python\n')
-        file.write('import unicornhat, signal\n')
-        file.write('pixels = ' + str(unicorn.get_pixels()) + '\n')
-        file.write('unicornhat.set_pixels(pixels)\n')
-        file.write('unicornhat.show()\n')
-        file.write('signal.pause()')
-        file.close()
-        os.chmod('saves/' + filename + '.py', 0o777 | stat.S_IEXEC)
-
-        return("ok" + str(unicorn.get_pixels()))
-    except AttributeError:
-        print("Unable to save, please update")
-        print("unicornhat library!")
-        return("fail")
 
 @app.route('/clear')
 def clear():
@@ -95,6 +73,10 @@ def set_hat(r, g, b):
 
 @app.route('/ambience/<r1>/<g1>/<b1>')
 def ambient(r1, g1, b1):
+    s = threading.Thread(None,unicorn.clear)
+    s.start()
+    s.join()
+
     r1, g1, b1 = int(r1), int(g1), int(b1)
     print r1, g1, b1
     cval = colorsys.rgb_to_hsv(r1/255.0, g1/255.0, b1/255.0)
@@ -102,6 +84,7 @@ def ambient(r1, g1, b1):
     c = int(cval[0]*360.0)
 
     s = threading.Thread(None, ambience.color_ambient(c))
+    s.start()
     return "OK"
 
 if __name__ == "__main__":
